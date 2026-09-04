@@ -1,0 +1,13 @@
+.venv/
+**/__pycache__/
+*.pyc
+.env
+token
+*.log
+seacache_spectrum/logs/
+seacache_spectrum/.venv/
+seacache_spectrum/outputs/images/
+seacache_spectrum/outputs/*_grid.png
+seacache_spectrum/run.log
+seacache_spectrum/__pycache__/
+
