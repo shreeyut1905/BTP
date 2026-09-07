@@ -260,14 +260,16 @@ def video_frames(out):
         rows.append((lab, base, hyb))
     W = 4 * TW + 3 * 6
     th = int(rows[0][1][0].height * TW / rows[0][1][0].width)
-    H = len(rows) * 2 * (th + 20) + 10
+    BAND = 44
+    H = len(rows) * 2 * (th + BAND) + 10
     canvas = Image.new("RGB", (W, H), "white")
     from PIL import ImageDraw
     d = ImageDraw.Draw(canvas)
     y = 0
     for lab, base, hyb in rows:
-        d.text((4, y + 2), lab + "  [top base / bottom ours]", fill="black")
-        y += 20
+        _label(d, (6, y + 6), lab + "   [top: base / bottom: ours]",
+               size=30)
+        y += BAND
         for fr in base, hyb:
             x = 0
             for im in fr:
@@ -286,16 +288,25 @@ def _side_by_side(base, hyb, h=420):
     return canvas
 
 
+FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+
+
+def _label(draw, xy, text, size=30):
+    from PIL import ImageFont
+    draw.text(xy, text, fill="black",
+              font=ImageFont.truetype(FONT, size))
+
+
 def _pair_strip(base, hyb, label, width=1400):
     """vertical base/top hybrid/bottom strip with labels."""
     w = width // 2
     h = int(base.height * w / base.width)
     b, hh = base.resize((w, h)), hyb.resize((w, h))
-    canvas = Image.new("RGB", (2 * w + 8, h + 28), "white")
-    canvas.paste(b, (0, 28)); canvas.paste(hh, (w + 8, 28))
+    canvas = Image.new("RGB", (2 * w + 8, h + 44), "white")
+    canvas.paste(b, (0, 44)); canvas.paste(hh, (w + 8, 44))
     from PIL import ImageDraw
-    d = ImageDraw.Draw(canvas)
-    d.text((4, 6), f"base | ours  ({label})", fill="black")
+    _label(ImageDraw.Draw(canvas), (6, 6),
+           f"base (left)  |  ours (right)   {label}", size=30)
     return canvas
 
 
@@ -331,7 +342,7 @@ def quals(out):
                        Image.LANCZOS)
     b2, h2, lab2 = _wan_frame(918, "outputs_video_wan_d035", frame=32)
     row2 = _pair_strip(b2, h2, "wan " + lab2, width=1400)
-    row2 = row2.crop((0, 28, 1400, row2.height))  # drop label band
+    row2 = row2.crop((0, 44, 1400, row2.height))  # drop label band
     fig3 = Image.new("RGB", (1400, f156.height + row2.height), "white")
     fig3.paste(f156, (0, 0))
     fig3.paste(row2, (0, f156.height))
