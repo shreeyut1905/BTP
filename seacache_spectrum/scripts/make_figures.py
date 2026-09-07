@@ -280,6 +280,52 @@ def video_frames(out):
     print("wrote fig_video_frames.png", canvas.size)
 
 
+def rebuild_strips(out=None):
+    """Regenerate examples_flux strips with large readable captions."""
+    from PIL import ImageFont
+    sys.path.insert(0, os.path.join(ROOT, "scripts"))
+    from eval_flux import read_prompts, safe_filename
+    prompts = read_prompts(os.path.join(ROOT, "prompts", "drawbench200.txt"))
+    d = load(os.path.join(ROOT, "outputs_hybrid_d03",
+                          "comparison_vs_base.json"))
+    by_idx = {r["idx"]: r for r in d["rows"]}
+    font_big = ImageFont.truetype(FONT, 40)
+    font_med = ImageFont.truetype(FONT, 34)
+    dest = os.path.join(ROOT, "examples_flux")
+    names = {93: "flux_093_base_vs_ours.png",
+             143: "flux_143_base_vs_ours.png",
+             156: "flux_156_base_vs_ours.png"}
+    for idx, fname in names.items():
+        p = prompts[idx]
+        slug = f"{idx:02d}-{safe_filename(p)[:60]}"
+        b = Image.open(os.path.join(ROOT, "outputs_base", "images",
+                                    f"{slug}_base.png")).convert("RGB")
+        h = Image.open(os.path.join(ROOT, "outputs_hybrid_d03", "images",
+                                    f"{slug}_hybrid.png")).convert("RGB")
+        W = 1024
+        bh = int(b.height * W / b.width)
+        b, h = b.resize((W, bh), Image.LANCZOS), h.resize((W, bh),
+                                                          Image.LANCZOS)
+        r = by_idx[idx]
+        cap = (f"idx {idx}  PSNR {r['psnr_hybrid']:.2f}dB  SSIM "
+               f"{r['ssim_hybrid']:.3f}  LPIPS {r['lpips_hybrid']:.3f}")
+        from PIL import ImageDraw
+        top, bot = 64, 58
+        canvas = Image.new("RGB", (2 * W + 12, top + bh + bot), "white")
+        dr = ImageDraw.Draw(canvas)
+        dr.text((8, 10), "BASE (FLUX.1-dev, 50 steps)", fill="black",
+                font=font_big)
+        dr.text((W + 20, 10), "OURS (hybrid, seacache_thresh=0.3)",
+                fill="black", font=font_big)
+        canvas.paste(b, (0, top))
+        canvas.paste(h, (W + 12, top))
+        dr.text((8, top + bh + 8), cap, fill="black", font=font_med)
+        dr.text((8, top + bh + 8 + 40), p[:110], fill="black",
+                font=font_med)
+        canvas.save(os.path.join(dest, fname))
+        print("rebuilt", fname, canvas.size)
+
+
 def _side_by_side(base, hyb, h=420):
     w = int(base.width * h / base.height)
     b, hh = base.resize((w, h), Image.LANCZOS), hyb.resize((w, h), Image.LANCZOS)
@@ -363,6 +409,8 @@ def quals(out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="/tmp/paper_respect/figs")
+    ap.add_argument("--rebuild_strips", action="store_true",
+                    help="regenerate examples_flux strips with big fonts")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
     fig2_quality_compute(args.out)
@@ -371,6 +419,8 @@ def main():
     quals(args.out)
     video_frames(args.out)
     fig4_ablation(args.out)
+    if args.rebuild_strips:
+        rebuild_strips()
 
 
 if __name__ == "__main__":
