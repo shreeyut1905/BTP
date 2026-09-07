@@ -236,6 +236,48 @@ def _wan_frame(idx, hybrid_dir, frame=32):
     return base, hyb, prompts[idx][:60]
 
 
+def video_frames(out):
+    """Temporal consistency: 3 prompts x (base row / ours row) x 4 frames."""
+    sys.path.insert(0, os.path.join(ROOT, "scripts"))
+    from eval_flux import read_prompts, safe_filename
+    prompts = read_prompts(os.path.join(ROOT, "prompts", "vbench946.txt"))
+    picks = [(834, "outputs_video_wan_d035_r124", "d0.35"),
+             (860, "outputs_video_wan_d035_r124", "d0.35"),
+             (852, "outputs_video_wan_d035_r124", "d0.35")]
+    frames = [8, 24, 40, 56]
+    TW = 320
+    rows = []
+    for idx, hdir, tag in picks:
+        slug = f"{idx:04d}-{safe_filename(prompts[idx])[:50]}"
+        bpaths = [os.path.join(ROOT, "outputs_video_wan_d02", "videos",
+                               f"{slug}_base_f{f:03d}.png") for f in frames]
+        base = [Image.open(p).convert("RGB") for p in bpaths]
+        hpath = os.path.join(ROOT, hdir, "videos", f"{slug}_hybrid.mp4")
+        hfr = imageio.mimread(hpath)
+        hyb = [Image.fromarray(hfr[f]).convert("RGB").resize(base[0].size)
+               for f in frames]
+        lab = f"{idx} {prompts[idx][:52]} ({tag})"
+        rows.append((lab, base, hyb))
+    W = 4 * TW + 3 * 6
+    th = int(rows[0][1][0].height * TW / rows[0][1][0].width)
+    H = len(rows) * 2 * (th + 20) + 10
+    canvas = Image.new("RGB", (W, H), "white")
+    from PIL import ImageDraw
+    d = ImageDraw.Draw(canvas)
+    y = 0
+    for lab, base, hyb in rows:
+        d.text((4, y + 2), lab + "  [top base / bottom ours]", fill="black")
+        y += 20
+        for fr in base, hyb:
+            x = 0
+            for im in fr:
+                canvas.paste(im.resize((TW, th), Image.LANCZOS), (x, y))
+                x += TW + 6
+            y += th
+    canvas.save(os.path.join(out, "fig_video_frames.png"))
+    print("wrote fig_video_frames.png", canvas.size)
+
+
 def _side_by_side(base, hyb, h=420):
     w = int(base.width * h / base.height)
     b, hh = base.resize((w, h), Image.LANCZOS), hyb.resize((w, h), Image.LANCZOS)
@@ -316,6 +358,7 @@ def main():
     figA_ssim_lpips(args.out)
     figA_skip(args.out)
     quals(args.out)
+    video_frames(args.out)
     fig4_ablation(args.out)
 
 
