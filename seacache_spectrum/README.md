@@ -95,9 +95,10 @@ match TFLOPs (FLUX ref 2976, Wan ref 8214, Hunyuan ref 14038).
 | FLUX δ=0.6 | 21.630 | 0.8225 | 0.1781 | 774 | 2.14 |
 
 δ0.3: 27.97 vs 26.29 (**+1.68 dB**); δ0.6: 21.63 vs 21.33 (+0.30 dB @774).
-Wan2.1-1.3B VBench-946 (preliminary): δ0.2 → **28.38 dB** (+1.78 vs 26.60),
-SSIM 0.905 @4303 TFLOPs; δ0.35 running; LPIPS pending.
-Video Tab.2 finalizing.
+Wan2.1-1.3B VBench-946: δ0.2 → **28.38 dB** (+1.78 vs 26.60), SSIM 0.905,
+LPIPS 0.066 @4303 TFLOPs; δ0.35 → **26.70 dB** (+4.92 vs 21.78), SSIM 0.884,
+LPIPS 0.084 @3336 TFLOPs. Same-δ comparisons (TFLOPs within ~20%);
+881/822 of 946 rows via MP4-decoded hybrids (~0.1 dB codec caveat).
 
 ## Qualitative examples (FLUX base vs ours, δ=0.3)
 

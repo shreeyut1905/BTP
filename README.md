@@ -19,7 +19,7 @@ Upstreams (not vendored here): [SeaCache](https://github.com/jiwoogit/SeaCache)
 
 Core (shared): `src/common/` (SEA filter + forecaster).
 Method note: [`seacache_spectrum/research.md`](seacache_spectrum/research.md).
-Paper draft: `paper/main.tex`.
+Paper: [`paper.pdf`](paper.pdf) (compiled; source kept outside the repo).
 
 ## Setup
 
@@ -61,5 +61,7 @@ cd seacache_spectrum
 
 FLUX.1-dev DrawBench-200: δ0.3 → **27.97 dB** (+1.68) @1241 TFLOPs;
 δ0.6 → **21.63 dB** (+0.30) @774 TFLOPs. Examples:
-`seacache_spectrum/examples_flux/`. Wan2.1-1.3B VBench-946 (preliminary):
-δ0.2 → **28.38 dB** (+1.78) @4303 TFLOPs; δ0.35 running.
+`seacache_spectrum/examples_flux/`. Wan2.1-1.3B VBench-946:
+δ0.2 → **28.38 dB** (+1.78), SSIM 0.905, LPIPS 0.066 @4303 TFLOPs;
+δ0.35 → **26.70 dB** (+4.92), SSIM 0.884, LPIPS 0.084 @3336 TFLOPs.
+Paper: [`paper.pdf`](paper.pdf).
