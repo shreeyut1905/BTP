@@ -24,8 +24,10 @@ import numpy as np
 import torch
 from PIL import Image
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from compare_psnr import image_to_float, lpips_score, psnr, read_prompts, safe_filename, ssim_score
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(_HERE, "..", "src"))
+sys.path.insert(0, _HERE)
+from eval_flux import image_to_float, lpips_score, psnr, read_prompts, safe_filename, ssim_score
 
 TFLOPS_REF = {"wan": 8214.0, "hunyuan": 14038.0}
 
@@ -62,7 +64,7 @@ def save_mp4(frames, path: str, fps: int = 16):
 def load_pipe(model: str, compile: bool = False):
     if model == "wan":
         from diffusers import WanPipeline
-        from wan_hybrid_forward import (
+        from wan.wan_forward import (
             cached_wan_forward, reset_wan_cache_state, wan_cache_totals,
         )
         pipe = WanPipeline.from_pretrained("Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
@@ -76,7 +78,7 @@ def load_pipe(model: str, compile: bool = False):
         fwd = (cached_wan_forward, reset_wan_cache_state, wan_cache_totals)
     else:
         from diffusers import HunyuanVideoPipeline
-        from hunyuan_hybrid_forward import (
+        from hunyuan.hunyuan_forward import (
             cached_hunyuan_forward, reset_hunyuan_cache_state, hunyuan_cache_totals,
         )
         pipe = HunyuanVideoPipeline.from_pretrained("hunyuanvideo-community/HunyuanVideo",
@@ -98,7 +100,7 @@ def parse_args():
     p.add_argument("--model", choices=["wan", "hunyuan"], required=True)
     p.add_argument("--modes", nargs="+", default=["base", "hybrid"])
     p.add_argument("--prompt_file", default=os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                                         "vbench_prompts.txt"))
+                                                         "..", "prompts", "vbench946.txt"))
     p.add_argument("--num_prompts", type=int, default=20)
     p.add_argument("--offset", type=int, default=0)
     p.add_argument("--output_dir", required=True)

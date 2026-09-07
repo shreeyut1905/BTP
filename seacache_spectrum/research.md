@@ -235,3 +235,14 @@ and sweeping δ so skip-rate vs quality is matched more carefully.
 Qualitative base-vs-ours strips (δ=0.3): `examples_flux/flux_143_base_vs_ours.png`
 (fennec, 33.79 dB), `examples_flux/flux_156_base_vs_ours.png` (statue,
 32.15 dB), `examples_flux/flux_093_base_vs_ours.png` (robot, 32.43 dB).
+
+## 9. Wan2.1-1.3B results (VBench-946, 480p65f, 50 steps, preliminary)
+
+- **hybrid δ=0.2:** PSNR **28.382**, SSIM 0.9054, LPIPS TBD,
+  12.0 s/vid, **4303 TFLOPs** (`outputs_video_wan_d02/comparison.json`)
+- vs SeaCache published δ0.2: 28.38 vs 26.60 (**+1.78 dB**), SSIM 0.905
+  vs 0.873 — at 4303 vs 3942 TFLOPs (refresh not exactly matched; δ kept
+  identical at 0.2).
+- Caveats: 881/946 rows scored via lossy-MP4 decode (~0.1 dB noise,
+  measured by PNG→MP4→decode round-trip at 41–44 dB); 65 tail rows exact.
+  Full LPIPS once GPU frees. δ=0.35 running.

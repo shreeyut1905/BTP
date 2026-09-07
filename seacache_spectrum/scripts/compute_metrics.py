@@ -23,7 +23,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from compare_psnr import image_to_float, lpips_score, psnr, read_prompts, safe_filename, ssim_score
+from eval_flux import image_to_float, lpips_score, psnr, read_prompts, safe_filename, ssim_score
 
 
 def parse_args():

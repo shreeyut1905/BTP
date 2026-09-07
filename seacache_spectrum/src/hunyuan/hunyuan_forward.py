@@ -20,8 +20,8 @@ from diffusers.utils import (
     unscale_lora_layers,
 )
 
-from util_seacache import apply_sea_with_scheduler, rel_l1
-from spectrum_forecaster import SpectrumResidualForecaster
+from common.util_seacache import apply_sea_with_scheduler, rel_l1
+from common.spectrum_forecaster import SpectrumResidualForecaster
 
 logger = logging.get_logger(__name__)
 

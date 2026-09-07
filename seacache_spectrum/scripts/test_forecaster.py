@@ -7,9 +7,11 @@ import sys
 import numpy as np
 import torch
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from spectrum_forecaster import SpectrumResidualForecaster  # noqa: E402
-from compare_psnr import psnr  # noqa: E402
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(_HERE, "..", "src"))
+sys.path.insert(0, _HERE)
+from common.spectrum_forecaster import SpectrumResidualForecaster  # noqa: E402
+from eval_flux import psnr  # noqa: E402
 from PIL import Image
 
 

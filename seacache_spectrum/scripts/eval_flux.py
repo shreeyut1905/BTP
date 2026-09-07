@@ -27,9 +27,11 @@ from diffusers import DiffusionPipeline
 from diffusers.models import FluxTransformer2DModel
 from PIL import Image
 
-# Local modules live next to this script.
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from flux_forward import cached_flux_forward, reset_cache_state  # noqa: E402
+# Local modules: ../src (model patches) + this dir (sibling scripts).
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(_HERE, "..", "src"))
+sys.path.insert(0, _HERE)
+from flux.flux_forward import cached_flux_forward, reset_cache_state  # noqa: E402
 
 
 def now_str() -> str:
@@ -241,7 +243,8 @@ def main():
     elif args.prompts:
         prompts = list(args.prompts)
     else:
-        default_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "prompts.txt")
+        default_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                      "..", "prompts", "flux_smoke.txt")
         prompts = read_prompts(default_file)
     prompts = prompts[: int(args.num_prompts)]
 

@@ -61,4 +61,5 @@ cd seacache_spectrum
 
 FLUX.1-dev DrawBench-200: δ0.3 → **27.97 dB** (+1.68) @1241 TFLOPs;
 δ0.6 → **21.63 dB** (+0.30) @774 TFLOPs. Examples:
-`seacache_spectrum/examples_flux/`. Video Tab.2 finalizing (Wan base running).
+`seacache_spectrum/examples_flux/`. Wan2.1-1.3B VBench-946 (preliminary):
+δ0.2 → **28.38 dB** (+1.78) @4303 TFLOPs; δ0.35 running.
