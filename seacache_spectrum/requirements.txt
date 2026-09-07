@@ -11,6 +11,7 @@ matplotlib
 huggingface_hub
 hf_transfer
 tqdm
+imageio
+imageio-ffmpeg
 scikit-image
 pyiqa
-calflops
