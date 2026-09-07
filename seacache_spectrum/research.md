@@ -134,7 +134,7 @@ Reproduce:
 
 ```bash
 cd seacache_spectrum
-python compare_psnr.py \
+python scripts/eval_flux.py \
   --width 1024 --height 1024 \
   --num_inference_steps 50 \
   --num_prompts 4 \
@@ -178,15 +178,18 @@ Quality improves; speed is essentially the SeaCache skip rate.
 
 ```
 seacache_spectrum/
-  spectrum_forecaster.py   Chebyshev + discrete Taylor (Spectrum port)
-  util_seacache.py         SEA Wiener filter (copied from SeaCache/FLUX)
-  flux_forward.py          patched FluxTransformer2DModel.forward
-                           modes: base | seacache | hybrid
-  compare_psnr.py          batched PSNR comparison vs base
-  test_forecaster.py       CPU unit tests for the forecaster / PSNR
-  prompts.txt              four evaluation prompts
+  src/common/spectrum_forecaster.py  Chebyshev + discrete Taylor (Spectrum port)
+  src/common/util_seacache.py        SEA Wiener filter (copied from SeaCache/FLUX)
+  src/flux/flux_forward.py           patched FluxTransformer2DModel.forward
+                                     modes: base | seacache | hybrid
+  src/wan/wan_forward.py             Wan2.1 patch (same gate + forecast)
+  src/hunyuan/hunyuan_forward.py     HunyuanVideo patch (diffusers path)
+  scripts/eval_flux.py               batched PSNR comparison vs base
+  scripts/eval_video.py              video base-vs-hybrid eval
+  scripts/test_forecaster.py         CPU unit tests for the forecaster / PSNR
+  prompts/flux_smoke.txt             four evaluation prompts
   requirements.txt
-  research.md              this note
+  research.md                        this note
 ```
 
 `cached_flux_forward`:

@@ -13,17 +13,23 @@ See [research.md](research.md) for the method and ablations.
 ## Layout
 
 ```
-spectrum_forecaster.py   shared Chebyshev+Taylor residual forecaster
-util_seacache.py         shared SEA Wiener filter
-flux_forward.py          FLUX.1-dev patch (cached_flux_forward)
-wan_hybrid_forward.py    Wan2.1-1.3B patch (cached_wan_forward)
-hunyuan_hybrid_forward.py HunyuanVideo patch, diffusers path (cached_hunyuan_forward)
-compare_psnr.py          FLUX eval: base vs hybrid PSNR/SSIM/LPIPS
-compare_video.py         video eval: base vs hybrid, MP4s + frame metrics
-compute_metrics.py       image metric-only pass (no GPU model load)
-prompts.txt              4-prompt FLUX smoke list
-vbench_prompts.txt       946-prompt VBench list (video)
-examples_flux/           base-vs-ours strips (δ=0.3)
+src/
+  common/                  shared SEA filter + residual forecaster
+    util_seacache.py       SEA Wiener filter (from SeaCache)
+    spectrum_forecaster.py Chebyshev+Taylor residual forecaster (from Spectrum)
+  flux/flux_forward.py     FLUX.1-dev patch (cached_flux_forward)
+  wan/wan_forward.py       Wan2.1-1.3B patch (cached_wan_forward)
+  hunyuan/hunyuan_forward.py HunyuanVideo patch, diffusers path
+scripts/
+  eval_flux.py             FLUX eval: base vs hybrid PSNR/SSIM/LPIPS
+  eval_video.py            video eval: base vs hybrid, MP4s + frame metrics
+  compute_metrics.py       image metric-only pass (no GPU model load)
+  test_forecaster.py       CPU unit tests (no weights)
+prompts/
+  flux_smoke.txt           4-prompt FLUX smoke list
+  drawbench200.txt         200-prompt DrawBench list (FLUX)
+  vbench946.txt            946-prompt VBench list (video)
+examples_flux/             base-vs-ours strips (δ=0.3)
 ```
 
 ## Setup
@@ -36,8 +42,8 @@ uv venv .venv && uv pip install --python .venv/bin/python -r requirements.txt
 ## Inference
 
 ```python
-from diffusers import DiffusionPipeline
-from flux_forward import cached_flux_forward, reset_cache_state
+import sys; sys.path.insert(0, "src")
+from flux.flux_forward import cached_flux_forward, reset_cache_state
 pipe = DiffusionPipeline.from_pretrained("black-forest-labs/FLUX.1-dev",
                                          torch_dtype=torch.bfloat16).to("cuda")
 pipe.transformer.__class__.forward = cached_flux_forward
@@ -54,24 +60,26 @@ patched forward. CFG streams are demuxed by timestep equality.
 ## Eval
 
 ```bash
+cd seacache_spectrum
 # FLUX smoke (4 prompts) then full DrawBench-200
-.venv/bin/python compare_psnr.py --num_prompts 4 --seacache_thresh 0.3 --output_dir ./outputs
-.venv/bin/python compare_psnr.py --num_prompts 200 --seacache_thresh 0.3 --output_dir ./outputs_hybrid_d03
-.venv/bin/python compute_metrics.py --base_dir ./outputs_base --hybrid_dir ./outputs_hybrid_d03
+.venv/bin/python scripts/eval_flux.py --num_prompts 4 --seacache_thresh 0.3 --output_dir ./outputs
+.venv/bin/python scripts/eval_flux.py --prompt_file prompts/drawbench200.txt \
+  --num_prompts 200 --seacache_thresh 0.3 --output_dir ./outputs_hybrid_d03
+.venv/bin/python scripts/compute_metrics.py --base_dir ./outputs_base --hybrid_dir ./outputs_hybrid_d03
 
 # Video: base (+save frames for reuse), then hybrid delta(s) off the same base
-.venv/bin/python compare_video.py --model wan --modes base hybrid \
-  --prompt_file vbench_prompts.txt --num_prompts 20 --num_frames 65 \
+.venv/bin/python scripts/eval_video.py --model wan --modes base hybrid \
+  --prompt_file prompts/vbench946.txt --num_prompts 20 --num_frames 65 \
   --num_inference_steps 50 --seacache_thresh 0.2 --save_base_frames \
   --compile --attn cudnn --output_dir ./outputs_video_wan_d02
-.venv/bin/python compare_video.py --model wan --modes hybrid \
-  --prompt_file vbench_prompts.txt --num_prompts 20 --num_frames 65 \
+.venv/bin/python scripts/eval_video.py --model wan --modes hybrid \
+  --prompt_file prompts/vbench946.txt --num_prompts 20 --num_frames 65 \
   --num_inference_steps 50 --seacache_thresh 0.35 \
   --reuse_base ./outputs_video_wan_d02 --compile --attn cudnn \
   --output_dir ./outputs_video_wan_d035
 # Resume an interrupted run without redoing finished prompts:
-.venv/bin/python compare_video.py --model wan --modes base \
-  --prompt_file vbench_prompts.txt --offset 824 --num_prompts 122 \
+.venv/bin/python scripts/eval_video.py --model wan --modes base \
+  --prompt_file prompts/vbench946.txt --offset 824 --num_prompts 122 \
   --save_base_frames --compile --attn cudnn --output_dir ./outputs_video_wan_d02_resume
 ```
 

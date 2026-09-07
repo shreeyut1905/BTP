@@ -13,11 +13,11 @@ Upstreams (not vendored here): [SeaCache](https://github.com/jiwoogit/SeaCache)
 
 | Model | Patch | Eval |
 |---|---|---|
-| FLUX.1-dev 1024×1024 | `seacache_spectrum/flux_forward.py` | `compare_psnr.py` + `prompts.txt` (DrawBench-200) |
-| Wan2.1-1.3B 480p×65f | `seacache_spectrum/wan_hybrid_forward.py` | `compare_video.py` + `vbench_prompts.txt` (VBench-946) |
-| HunyuanVideo 480p×65f | `seacache_spectrum/hunyuan_hybrid_forward.py` (diffusers path) | `compare_video.py` |
+| FLUX.1-dev 1024×1024 | `seacache_spectrum/src/flux/` | `scripts/eval_flux.py` + `prompts/drawbench200.txt` |
+| Wan2.1-1.3B 480p×65f | `seacache_spectrum/src/wan/` | `scripts/eval_video.py` + `prompts/vbench946.txt` |
+| HunyuanVideo 480p×65f | `seacache_spectrum/src/hunyuan/` (diffusers path) | `scripts/eval_video.py` |
 
-Core (shared): `spectrum_forecaster.py`, `util_seacache.py`.
+Core (shared): `src/common/` (SEA filter + forecaster).
 Method note: [`seacache_spectrum/research.md`](seacache_spectrum/research.md).
 Paper draft: `paper/main.tex`.
 
@@ -33,8 +33,8 @@ uv venv .venv && uv pip install --python .venv/bin/python -r requirements.txt
 ## Inference
 
 ```python
-from diffusers import DiffusionPipeline
-from flux_forward import cached_flux_forward, reset_cache_state
+import sys; sys.path.insert(0, "seacache_spectrum/src")
+from flux.flux_forward import cached_flux_forward, reset_cache_state
 pipe = DiffusionPipeline.from_pretrained("black-forest-labs/FLUX.1-dev",
                                          torch_dtype=torch.bfloat16).to("cuda")
 pipe.transformer.__class__.forward = cached_flux_forward
@@ -46,13 +46,14 @@ reset_cache_state(pipe.transformer, num_steps=50, mode="hybrid", args)  # or "ba
 ```bash
 cd seacache_spectrum
 # FLUX, 4-prompt smoke
-.venv/bin/python compare_psnr.py --num_prompts 4 --seacache_thresh 0.3 --output_dir ./outputs
+.venv/bin/python scripts/eval_flux.py --num_prompts 4 --seacache_thresh 0.3 --output_dir ./outputs
 # FLUX, DrawBench-200
-.venv/bin/python compare_psnr.py --num_prompts 200 --seacache_thresh 0.3 --output_dir ./outputs_hybrid_d03
-.venv/bin/python compute_metrics.py --base_dir ./outputs_base --hybrid_dir ./outputs_hybrid_d03
+.venv/bin/python scripts/eval_flux.py --prompt_file prompts/drawbench200.txt \
+  --num_prompts 200 --seacache_thresh 0.3 --output_dir ./outputs_hybrid_d03
+.venv/bin/python scripts/compute_metrics.py --base_dir ./outputs_base --hybrid_dir ./outputs_hybrid_d03
 # Wan2.1 (see seacache_spectrum/README.md for resume/reuse flags)
-.venv/bin/python compare_video.py --model wan --modes base hybrid \
-  --prompt_file vbench_prompts.txt --num_prompts 20 --seacache_thresh 0.2 \
+.venv/bin/python scripts/eval_video.py --model wan --modes base hybrid \
+  --prompt_file prompts/vbench946.txt --num_prompts 20 --seacache_thresh 0.2 \
   --save_base_frames --compile --attn cudnn --output_dir ./outputs_video_wan_d02
 ```
 
