@@ -1,13 +1,57 @@
+# Python / secrets
 .venv/
+**/.venv/
 **/__pycache__/
 *.pyc
 .env
 token
+
+# Logs
 *.log
 seacache_spectrum/logs/
-seacache_spectrum/.venv/
-seacache_spectrum/outputs/images/
-seacache_spectrum/outputs/*_grid.png
 seacache_spectrum/run.log
-seacache_spectrum/__pycache__/
+
+# Experiment outputs (images, videos, frames, grids)
+seacache_spectrum/outputs/
+seacache_spectrum/outputs_*/
+**/images/
+**/videos/
+**/frames/
+
+# Media — never index these for agents or git
+*.mp4
+*.webm
+*.avi
+*.mov
+*.mkv
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.bmp
+*.tiff
+*.tif
+*.svg
+
+# Model weights / binaries
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.onnx
+*.npz
+
+# Paper build artifacts
+paper/*.aux
+paper/*.out
+paper/*.pdf
+paper/*.synctex.gz
+paper/*.toc
+paper/*.bbl
+paper/*.blg
+paper/*.fls
+paper/*.fdb_latexmk
+
 

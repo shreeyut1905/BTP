@@ -1,9 +1,32 @@
 .venv/
 __pycache__/
-outputs/images/
-outputs/*_grid.png
 *.pyc
-run.log
-logs/
 .env
 token
+*.log
+run.log
+logs/
+
+# All experiment dumps
+outputs/
+outputs_*/
+images/
+videos/
+frames/
+
+# Media
+*.mp4
+*.webm
+*.avi
+*.mov
+*.mkv
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.bmp
+*.tiff
+*.tif
+*.svg
+

@@ -11,3 +11,6 @@ matplotlib
 huggingface_hub
 hf_transfer
 tqdm
+scikit-image
+pyiqa
+calflops

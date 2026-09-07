@@ -215,3 +215,20 @@ Per-sample skip masks so batching does not couple prompts.
 Possible follow-ups: more prompts (DrawBench / COCO), FID/CLIP besides
 PSNR, forecasting post-block hidden states as Spectrum does natively,
 and sweeping δ so skip-rate vs quality is matched more carefully.
+
+---
+
+## 8. Full DrawBench-200 results (FLUX.1-dev, complete)
+
+- **hybrid δ=0.3:** PSNR **27.969**, SSIM 0.9182, LPIPS 0.0699,
+  3.33 s/img, **1241 TFLOPs** (`outputs_hybrid_d03/comparison_vs_base.json`)
+- **hybrid δ=0.6:** PSNR **21.630**, SSIM 0.8225, LPIPS 0.1781,
+  2.14 s/img, **774 TFLOPs** (`outputs_hybrid_d06/comparison_vs_base.json`)
+- base 200 in `outputs_base/`. TFLOPs convention: 2976 × computed-ratio
+  (SeaCache Table 1 reference). Seeds 0+i, guidance 3.5, bf16.
+- vs SeaCache published: δ0.3 → 27.97 vs 26.29 (**+1.68 dB**);
+  δ0.6 → 21.63 vs 21.33 (+0.30 dB) at identical 774 TFLOPs.
+
+Qualitative base-vs-ours strips (δ=0.3): `examples_flux/flux_143_base_vs_ours.png`
+(fennec, 33.79 dB), `examples_flux/flux_156_base_vs_ours.png` (statue,
+32.15 dB), `examples_flux/flux_093_base_vs_ours.png` (robot, 32.43 dB).
