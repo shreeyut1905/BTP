@@ -60,8 +60,24 @@ cd seacache_spectrum
 ## Results (ours, B200; baselines SeaCache-published at matched TFLOPs)
 
 FLUX.1-dev DrawBench-200: δ0.3 → **27.97 dB** (+1.68) @1241 TFLOPs;
-δ0.6 → **21.63 dB** (+0.30) @774 TFLOPs. Examples:
-`seacache_spectrum/examples_flux/`. Wan2.1-1.3B VBench-946:
+δ0.6 → **21.63 dB** (+0.30) @774 TFLOPs. Wan2.1-1.3B VBench-946:
 δ0.2 → **28.38 dB** (+1.78), SSIM 0.905, LPIPS 0.066 @4303 TFLOPs;
 δ0.35 → **26.70 dB** (+4.92), SSIM 0.884, LPIPS 0.084 @3336 TFLOPs.
-Paper: [`paper.pdf`](paper.pdf).
+Paper: [`paper.pdf`](paper.pdf). Full per-prompt metrics:
+[`seacache_spectrum/results/`](seacache_spectrum/results/).
+
+### FLUX examples (base left vs ReSPect right, δ0.3)
+
+| Prompt | Base vs ReSPect |
+|---|---|
+| Robot (#93) | <img src="seacache_spectrum/examples_flux/flux_093_base_vs_ours.png" width="800"> |
+| Fennec fox (#143) | <img src="seacache_spectrum/examples_flux/flux_143_base_vs_ours.png" width="800"> |
+| Statue (#156) | <img src="seacache_spectrum/examples_flux/flux_156_base_vs_ours.png" width="800"> |
+
+### Wan2.1 examples (base vs ReSPect δ0.35, 480×832×65f)
+
+| Prompt | Base | ReSPect (δ=0.35) |
+|---|---|---|
+| Ocean swim | <video src="seacache_spectrum/examples_video/0834-ocean_base.mp4" width="360" controls></video> | <video src="seacache_spectrum/examples_video/0834-ocean_hybrid.mp4" width="360" controls></video> |
+| Pool splash | <video src="seacache_spectrum/examples_video/0852-indoor_swimming_pool_base.mp4" width="360" controls></video> | <video src="seacache_spectrum/examples_video/0852-indoor_swimming_pool_hybrid.mp4" width="360" controls></video> |
+| Waterfall | <video src="seacache_spectrum/examples_video/0860-waterfall_base.mp4" width="360" controls></video> | <video src="seacache_spectrum/examples_video/0860-waterfall_hybrid.mp4" width="360" controls></video> |
