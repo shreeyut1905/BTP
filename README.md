@@ -78,6 +78,6 @@ Paper: [`paper.pdf`](paper.pdf). Full per-prompt metrics:
 
 | Prompt | Base | ReSPect (δ=0.35) |
 |---|---|---|
-| Ocean swim | <video src="seacache_spectrum/examples_video/0834-ocean_base.mp4" width="360" controls></video> | <video src="seacache_spectrum/examples_video/0834-ocean_hybrid.mp4" width="360" controls></video> |
-| Pool splash | <video src="seacache_spectrum/examples_video/0852-indoor_swimming_pool_base.mp4" width="360" controls></video> | <video src="seacache_spectrum/examples_video/0852-indoor_swimming_pool_hybrid.mp4" width="360" controls></video> |
-| Waterfall | <video src="seacache_spectrum/examples_video/0860-waterfall_base.mp4" width="360" controls></video> | <video src="seacache_spectrum/examples_video/0860-waterfall_hybrid.mp4" width="360" controls></video> |
+| Ocean swim | <video src="https://raw.githubusercontent.com/shreeyut1905/BTP/main/seacache_spectrum/examples_video/0834-ocean_base.mp4" width="360" controls></video> | <video src="https://raw.githubusercontent.com/shreeyut1905/BTP/main/seacache_spectrum/examples_video/0834-ocean_hybrid.mp4" width="360" controls></video> |
+| Pool splash | <video src="https://raw.githubusercontent.com/shreeyut1905/BTP/main/seacache_spectrum/examples_video/0852-indoor_swimming_pool_base.mp4" width="360" controls></video> | <video src="https://raw.githubusercontent.com/shreeyut1905/BTP/main/seacache_spectrum/examples_video/0852-indoor_swimming_pool_hybrid.mp4" width="360" controls></video> |
+| Waterfall | <video src="https://raw.githubusercontent.com/shreeyut1905/BTP/main/seacache_spectrum/examples_video/0860-waterfall_base.mp4" width="360" controls></video> | <video src="https://raw.githubusercontent.com/shreeyut1905/BTP/main/seacache_spectrum/examples_video/0860-waterfall_hybrid.mp4" width="360" controls></video> |
