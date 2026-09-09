@@ -168,17 +168,11 @@ source deliberately outside git, only compiled PDFs tracked)
   source clone + 4 transformers-5 BLIP shims + `fairscale==0.4.13`.
 
 ## 7. Running now → pending (updated Sep 8)
-- RUNNING Hunyuan base resume: `/workspace/HunyuanVideo/hybrid_generate.py
-  --offset 112 --num_prompts 834 --modes base` → same
-  `outputs_hunyuan_480p_d019/` dir (112 base videos already there),
-  480×832×65f, 50 steps, guidance 6.0, seed 42+idx,
-  `--compile --compile_mode max-autotune-no-cudagraphs --save_base_frames`.
-  Log `seacache_spectrum/logs/hunyuan_480p_base_resume.log`, launcher
-  `logs/run_hunyuan_resume.sh`. ~3.5 min/video → ~2 days for 834.
-  (First try with `max-autotune` died on cudagraph error — sampler holds
-  block outputs live across steps; fallback was pre-planned. See §10.)
-- QUEUED after base: hybrid δ=0.19 (`--reuse_base` same dir) → hybrid
-  δ=0.35 into `outputs_hunyuan_480p_d035/`.
+- RUNNING (Sep 9) Hunyuan hybrid δ=0.19: full 946 `--modes hybrid
+  --reuse_base` into the same `outputs_hunyuan_480p_d019/` (base PNGs reused,
+  never regenerated), log `logs/hunyuan_480p_d019_hybrid.log`, launcher
+  `logs/run_hunyuan_d019.sh`. First video through compile+denoise clean.
+- QUEUED after d019: hybrid δ=0.35 into `outputs_hunyuan_480p_d035/`.
 - THEN: fill paper Tab. 2 Hunyuan rows; optional VBench-Quality/CycleReward.
 - Commit hygiene: push only `seacache_spectrum/` + docs + `paper.pdf` +
   `supplementary.pdf` + `progress.md` (user explicitly requested
@@ -244,6 +238,15 @@ written honest, not as grid-search wins)
   now denoising cleanly ~1.55 s/step). Added fwd/skip counters + TFLOPs
   (ref 14038) + per-prompt seed records to the script. Runner edits are
   local-only (`/workspace/HunyuanVideo/` not in git).
+- Sep 9: base resume finished 834/834 → **946/946 base complete**
+  (61490 PNG frames verified, 65 each, zero missing). The process died
+  AFTER the last video without writing `comparison.json` (no SUMMARY;
+  likely VRAM OOM in final assembly — samples were held on GPU). Fix:
+  `vids` now stored CPU-fp16 + `del sample,out` + `empty_cache` per iter.
+  Reconstructed base `comparison.json` from both logs' timings
+  (112×~345s pre-compile + 834×~83s compiled = 107986 s total,
+  114.1 s avg, full-compute 14038 TFLOPs) so `--reuse_base` works.
+  Hybrid δ0.19 launched same day (full 946, reuse, same dir).
 - SeaCache-reported targets to beat: 32.39 dB @6747 (δ0.19),
   26.46 dB @4598 (δ0.35). Reference clones: SeaCache example 720×1280×33f
   (no compile); Spectrum config 544×960×61f (no compile). Our 480×832×65f
