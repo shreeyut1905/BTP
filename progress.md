@@ -246,6 +246,24 @@ written honest, not as grid-search wins)
   Reconstructed base `comparison.json` from both logs' timings
   (112×~345s pre-compile + 834×~83s compiled = 107986 s total,
   114.1 s avg, full-compute 14038 TFLOPs) so `--reuse_base` works.
+- Sep 9: hybrid δ0.19 launched → died at 6/946 with CUDA OOM in
+  `BaseForecaster._fit_if_needed` (`Xt @ H` tried +20.6 GiB). Two root
+  causes, both runner-only fixes in `hybrid_generate.py` (shared
+  `common/` forecaster untouched):
+  1. Forecaster/gate state was reset per-MODE not per-prompt → videos 2+
+     inherited stale residuals + unbounded K-history in VRAM (those 6
+     videos discarded). Now per-prompt reset (cnt, accumulator, cached
+     input/residual, forecaster) + per-video fwd/skip with mode totals.
+  2. Hunyuan residuals are ~1e9-dim → K=100 fp32 history + (5×D) fit
+     can't sit next to the 62 GB model. New `--forecaster_device`
+     (default `cpu`, plumbed through `_ensure_forecaster`): history+fit
+     on host (1.9 TB), predict moved to CUDA per skip. Math unchanged
+     (fit already upcasts to fp32).
+  Relaunched full 946: video 1 = 229 s (compile+warmup), then ~90 s/video
+  (~80% skip: fwd≈10-11, skip≈39-40/video), VRAM flat ~53 GB. ~24 h total.
+  (This run's per-video fwd/skip log lines are cumulative running totals —
+  per-prompt counter reset landed in the file version for the d035 run;
+  final totals/TFLOPs math is identical either way.)
   Hybrid δ0.19 launched same day (full 946, reuse, same dir).
 - SeaCache-reported targets to beat: 32.39 dB @6747 (δ0.19),
   26.46 dB @4598 (δ0.35). Reference clones: SeaCache example 720×1280×33f
