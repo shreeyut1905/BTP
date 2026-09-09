@@ -168,10 +168,12 @@ source deliberately outside git, only compiled PDFs tracked)
   source clone + 4 transformers-5 BLIP shims + `fairscale==0.4.13`.
 
 ## 7. Running now → pending (updated Sep 8)
-- RUNNING (Sep 9) Hunyuan hybrid δ=0.19: full 946 `--modes hybrid
-  --reuse_base` into the same `outputs_hunyuan_480p_d019/` (base PNGs reused,
-  never regenerated), log `logs/hunyuan_480p_d019_hybrid.log`, launcher
-  `logs/run_hunyuan_d019.sh`. First video through compile+denoise clean.
+- RUNNING (Sep 9) Hunyuan hybrid δ=0.19, ALL-CUDA: full 946
+  `--modes hybrid --reuse_base` into the same `outputs_hunyuan_480p_d019/`,
+  `--forecaster_device cuda --spectrum_fit_chunks 8`,
+  log `logs/hunyuan_480p_d019_hybrid.log`, launcher
+  `logs/run_hunyuan_d019.sh`. **~23 s/video** (fwd=10 skip=40/video),
+  VRAM flat ~100-119 GB of 178 GB. ~6.5 h for 946.
 - QUEUED after d019: hybrid δ=0.35 into `outputs_hunyuan_480p_d035/`.
 - THEN: fill paper Tab. 2 Hunyuan rows; optional VBench-Quality/CycleReward.
 - Commit hygiene: push only `seacache_spectrum/` + docs + `paper.pdf` +
@@ -264,7 +266,16 @@ written honest, not as grid-search wins)
   (This run's per-video fwd/skip log lines are cumulative running totals —
   per-prompt counter reset landed in the file version for the d035 run;
   final totals/TFLOPs math is identical either way.)
-  Hybrid δ0.19 launched same day (full 946, reuse, same dir).
+- Sep 9 (user: everything on CUDA — hybrid slower than base makes no
+  sense): killed the CPU-forecaster run, added `fit_chunks` to
+  `common/spectrum_forecaster.py` (`BaseForecaster`/`ChebyshevForecaster`/
+  `SpectrumResidualForecaster`, default 1 = original code path untouched;
+  chunked solve is per-column-block independent → verified BIT-IDENTICAL
+  vs unchunked on CPU test, max abs diff 0.0; `test_forecaster.py` passes).
+  Runner: `--spectrum_fit_chunks` + `--forecaster_device` plumbed through.
+  Relaunched d019 all-CUDA (`cuda` + 8 chunks): ~23 s/video at fwd=10
+  skip=40 (3.5× faster than the 83 s base), VRAM flat ~100-119 GB.
+  Stale CPU-forecaster hybrids deleted (device-math consistency).
 - SeaCache-reported targets to beat: 32.39 dB @6747 (δ0.19),
   26.46 dB @4598 (δ0.35). Reference clones: SeaCache example 720×1280×33f
   (no compile); Spectrum config 544×960×61f (no compile). Our 480×832×65f

@@ -23,6 +23,17 @@ def _unflatten(x_flat: torch.Tensor, shape: torch.Size) -> torch.Tensor:
     return x_flat.reshape(shape)
 
 
+def _chunk_ranges(n: int, n_chunks: int):
+    """Yield (start, end) index ranges splitting n items into n_chunks parts."""
+    base, rem = divmod(n, n_chunks)
+    s = 0
+    for i in range(n_chunks):
+        e = s + base + (1 if i < rem else 0)
+        if e > s:
+            yield s, e
+        s = e
+
+
 class BaseForecaster(nn.Module):
     def __init__(
         self,
@@ -33,9 +44,12 @@ class BaseForecaster(nn.Module):
         feature_shape=None,
         t_min: float = 0.0,
         t_max: float = 50.0,
+        fit_chunks: int = 1,
     ):
         super().__init__()
         assert K >= M + 2, "K should exceed basis size for stability"
+        assert fit_chunks >= 1, "fit_chunks must be >= 1"
+        self.fit_chunks = int(fit_chunks)
         self.M = M
         self.K = K
         self.lam = lam
@@ -116,7 +130,7 @@ class BaseForecaster(nn.Module):
         assert self.ready()
         taus = self._taus(self.t_buf)
         X = self._build_design(taus).to(torch.float32)
-        H = self._H_buf.to(torch.float32)
+        H = self._H_buf
         _, P = X.shape
         assert P == self.P
         lamI = self.lam * torch.eye(P, device=X.device, dtype=X.dtype)
@@ -128,8 +142,25 @@ class BaseForecaster(nn.Module):
             jitter = 1e-6 * XtX.diag().mean()
             L = torch.linalg.cholesky(XtX + jitter * torch.eye(P, device=X.device))
 
-        XtH = Xt @ H
-        C = torch.cholesky_solve(XtH.to(torch.float32), L).to(DTYPE)
+        if self.fit_chunks <= 1:
+            XtH = Xt @ H.to(torch.float32)
+            C = torch.cholesky_solve(XtH.to(torch.float32), L).to(DTYPE)
+        else:
+            # Chunked solve over the feature dim: each column-block is an
+            # independent ridge solve with the same Cholesky factor, so the
+            # result matches the unchunked fit while peak memory drops by
+            # ~fit_chunks (the full fp32 upcast of H never materializes).
+            D = H.shape[1]
+            n_chunks = min(self.fit_chunks, D)
+            blocks = []
+            for s, e in _chunk_ranges(D, n_chunks):
+                Hb = H[:, s:e].to(torch.float32)
+                XtHb = Xt @ Hb
+                Cb = torch.cholesky_solve(XtHb.to(torch.float32), L).to(DTYPE)
+                blocks.append(Cb)
+                del Hb, XtHb, Cb
+            C = torch.cat(blocks, dim=1)
+            del blocks
         self._coef = C
         self._XtX_fac = L
         self._tau_cache = taus
@@ -158,8 +189,10 @@ class ChebyshevForecaster(BaseForecaster):
         feature_shape=None,
         t_min: float = 0.0,
         t_max: float = 50.0,
+        fit_chunks: int = 1,
     ):
-        super().__init__(M, K, lam, device, feature_shape, t_min=t_min, t_max=t_max)
+        super().__init__(M, K, lam, device, feature_shape, t_min=t_min, t_max=t_max,
+                         fit_chunks=fit_chunks)
 
     @property
     def P(self) -> int:
@@ -273,6 +306,7 @@ class SpectrumResidualForecaster:
         device=None,
         t_max: float = 50.0,
         min_cheb_obs: int = 4,
+        fit_chunks: int = 1,
     ):
         cheb = ChebyshevForecaster(
             M=m,
@@ -280,6 +314,7 @@ class SpectrumResidualForecaster:
             lam=lam,
             device=device,
             t_max=t_max,
+            fit_chunks=fit_chunks,
         )
         self.spectrum = Spectrum(
             cheb,
