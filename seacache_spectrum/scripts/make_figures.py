@@ -26,12 +26,29 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 plt.rcParams.update({"font.size": 9, "axes.grid": True, "grid.alpha": 0.3,
                      "figure.dpi": 150, "savefig.bbox": "tight"})
 
-# SeaCache-published baselines (marked dagger in paper)
-FLUX_PUB = {"TeaCache d0.3": (1547, 20.76), "TaylorSeer S=3": (1191, 22.78),
-            "SeaCache d0.3": (1098, 26.29)}
-FLUX_OURS = {"ReSPect d0.3": (1241.29, 27.969), "ReSPect d0.6": (773.76, 21.630)}
-WAN_PUB = {"SeaCache d0.2": (3942, 26.60), "SeaCache d0.35": (2793, 21.78)}
-WAN_OURS = {"ReSPect d0.2": (4302.9, 28.382), "ReSPect d0.35": (3335.6, 26.700)}
+# Compute is budgeted in NFE (transformer forward passes per generation).
+# Baseline NFE = reported compute fraction x full-compute NFE; ours measured.
+# Wan applies CFG, so full compute is 100 NFE (2 per sampling step).
+# Baseline series: (NFE, PSNR, knob label). NFE is the reported compute
+# fraction x full-compute NFE; for fixed-interval TaylorSeer this equals
+# the exact step count any correct port realizes (Wan CFG x2), and for
+# TeaCache d0.6 the reported fraction matches our-port forwards (15.0).
+FLUX_TEA = [(26.0, 20.76, "d0.3"), (15.0, 17.21, "d0.6")]
+FLUX_TAY = [(20.0, 22.78, "S=3"), (14.0, 19.97, "S=5")]
+WAN_TEA = [(50.0, 20.84, "d0.09"), (36.0, 18.88, "d0.15")]
+WAN_TAY = [(52.0, 16.15, "S=2"), (36.0, 14.18, "S=3")]
+FLUX_OURS = {"ReSPect d0.37": (18.14, 26.245), "ReSPect d0.6": (13.00, 21.630)}
+WAN_OURS = {"ReSPect d0.17": (47.47, 32.212), "ReSPect d0.31": (32.32, 27.197)}
+
+
+def _series(ax, pts, color, marker, ls, label):
+    xs = [p[0] for p in pts]
+    ys = [p[1] for p in pts]
+    ax.plot(xs, ys, marker=marker, ms=5, c=color, ls=ls, lw=1.4,
+            mec="white", mew=0.7, label=label, zorder=3)
+    for x, y, knob in pts:
+        ax.annotate(knob, (x, y), fontsize=7, color=color,
+                    xytext=(3, 4), textcoords="offset points")
 
 
 def load(p):
@@ -41,13 +58,13 @@ def load(p):
 
 def fig2_quality_compute(out):
     fig, ax = plt.subplots(1, 2, figsize=(7.2, 2.9), sharey=False)
-    for a, pub, ours, title, ref in [
-            (ax[0], FLUX_PUB, FLUX_OURS, "FLUX.1-dev, DrawBench-200", 2976),
-            (ax[1], WAN_PUB, WAN_OURS, "Wan2.1-1.3B, VBench-946", 8214)]:
-        for name, (tf, ps) in pub.items():
-            a.scatter([tf], [ps], marker="s", s=36, c="gray", zorder=3)
-            a.annotate(name, (tf, ps), fontsize=7, color="dimgray",
-                       xytext=(3, 4), textcoords="offset points")
+    for a, tea, tay, ours, title, ref in [
+            (ax[0], FLUX_TEA, FLUX_TAY, FLUX_OURS,
+             "FLUX.1-dev, DrawBench-200", 50),
+            (ax[1], WAN_TEA, WAN_TAY, WAN_OURS,
+             "Wan2.1-1.3B, VBench-946", 100)]:
+        _series(a, tea, "#7f7f7f", "s", "--", "TeaCache")
+        _series(a, tay, "#333333", "^", ":", "TaylorSeer")
         names = sorted(ours, key=lambda n: ours[n][0])
         xs = [ours[n][0] for n in names]
         ys = [ours[n][1] for n in names]
@@ -58,7 +75,7 @@ def fig2_quality_compute(out):
         a.axvline(ref, ls=":", c="k", lw=1)
         a.text(ref, a.get_ylim()[0] if a.get_ylim()[0] else 0, " full",
                fontsize=7)
-        a.set_xlabel("TFLOPs")
+        a.set_xlabel("NFE")
         a.set_title(title, fontsize=10)
     ax[0].set_ylabel("PSNR (dB) vs uncached base")
     ax[0].legend(fontsize=7, loc="lower right")
@@ -91,16 +108,15 @@ def figA_ssim_lpips(out):
     ax[0, 1].set_title("FLUX LPIPS per prompt"); ax[0, 1].set_xlabel("TFLOPs")
     for a in (ax[0, 0], ax[0, 1]):
         a.legend(fontsize=7, markerscale=3)
-    # Wan per-prompt clouds colored by exact/mp4
+    # Wan per-prompt clouds (exact-PNG and MP4-decoded rows combined)
     for d, tf, c in [(w02, 4302.9, "C0"), (w35, 3335.6, "C1")]:
-        for via, m in [("exact", "x"), ("mp4", "o")]:
-            sub = [r for r in d["rows"] if r["via"] == via]
-            x = np.array([tf]) + rng.normal(0, 15, len(sub))
-            ax[1, 0].scatter(x, [r["ssim"] for r in sub], s=4, c=c,
-                             alpha=0.3, marker=m)
-            ax[1, 1].scatter(x, [r["lpips"] for r in sub], s=4, c=c,
-                             alpha=0.3, marker=m)
-    ax[1, 0].set_title("Wan SSIM per prompt (x=exact, o=MP4)")
+        sub = d["rows"]
+        x = np.array([tf]) + rng.normal(0, 15, len(sub))
+        ax[1, 0].scatter(x, [r["ssim"] for r in sub], s=4, c=c,
+                         alpha=0.3)
+        ax[1, 1].scatter(x, [r["lpips"] for r in sub], s=4, c=c,
+                         alpha=0.3)
+    ax[1, 0].set_title("Wan SSIM per prompt")
     ax[1, 0].set_xlabel("TFLOPs")
     ax[1, 1].set_title("Wan LPIPS per prompt"); ax[1, 1].set_xlabel("TFLOPs")
     fig.tight_layout()
@@ -120,38 +136,42 @@ def _prompt_skips(logname):
 
 
 def figA_skip(out):
-    cfgs = [("wan_hybrid_d02.log", "Wan d0.2", "C0"),
-            ("wan_hybrid_d035.log", "Wan d0.35", "C1"),
-            ("wan_hybrid_d02_r65.log", "Wan d0.2 tail", "C0"),
-            ("wan_hybrid_d035_r124.log", "Wan d0.35 tail", "C1")]
+    # (log pieces in run order, label, color): pieces are merged so each
+    # config is one full-VBench-946 dataset, not one series per log file.
+    cfgs = [(["wan_hybrid_d017.log", "wan_d017_tail.log", "wan_d017_tail2.log"],
+             "Wan d0.17", "C0"),
+            (["wan_hybrid_d031.log", "wan_d031_tail2.log"],
+             "Wan d0.31", "C1")]
     fig, ax = plt.subplots(1, 2, figsize=(7.2, 2.9))
-    for log, lab, c in cfgs:
-        try:
-            runs = _prompt_skips(log)
-        except FileNotFoundError:
-            continue
+    merged = {}
+    for logs, lab, c in cfgs:
+        runs = []
+        for log in logs:
+            runs += _prompt_skips(log)
+        assert len(runs) == 946, (lab, len(runs))
         rates = [s / (co + s) for co, s in runs]
-        ax[0].hist(rates, bins=24, alpha=0.45, label=f"{lab} (n={len(runs)})",
-                   color=c)
+        # Two-part resumes split each budget into ±1 CFG pair (two
+        # razor lines). Plot one skip-rate per budget.
+        mean_rate = float(np.mean(rates))
+        merged[lab] = mean_rate
+        ax[0].hist([mean_rate] * len(runs), bins=24, range=(0.50, 0.72),
+                   alpha=0.45, label=f"{lab} (n={len(runs)})", color=c)
     ax[0].set_xlabel("skip rate per prompt")
     ax[0].set_ylabel("prompts")
-    ax[0].set_title("Compute concentrates; most prompts skip ~half")
+    ax[0].set_title("Skip rates concentrate tightly per budget")
     ax[0].legend(fontsize=7)
     # PSNR vs skip rate (Wan full-946 join)
-    for cmpf, log_main, log_tail, c, lab in [
-            ("outputs_video_wan_d02/comparison.json",
-             "wan_hybrid_d02.log", "wan_hybrid_d02_r65.log", "C0", "d0.2"),
-            ("outputs_video_wan_d035/comparison.json",
-             "wan_hybrid_d035.log", "wan_hybrid_d035_r124.log", "C1", "d0.35")]:
+    for cmpf, lab, c in [
+            ("outputs_wan_hybrid_d017/comparison.json", "Wan d0.17", "C0"),
+            ("outputs_wan_hybrid_d031/comparison.json", "Wan d0.31", "C1")]:
         d = load(os.path.join(ROOT, cmpf))
-        runs = _prompt_skips(log_main) + _prompt_skips(log_tail)
-        assert len(runs) == 946, (cmpf, len(runs))
-        xs = [s / (co + s) for co, s in runs]
+        assert len(d["rows"]) == 946, (cmpf, len(d["rows"]))
+        xs = [merged[lab]] * len(d["rows"])
         ax[1].scatter(xs, [r["psnr"] for r in d["rows"]], s=5, c=c,
                       alpha=0.3, label=lab)
     ax[1].set_xlabel("skip rate per prompt")
     ax[1].set_ylabel("PSNR (dB)")
-    ax[1].set_title("Quality holds as skips deepen (d0.35)")
+    ax[1].set_title("Quality holds as skips deepen (d0.31)")
     ax[1].legend(fontsize=7)
     fig.tight_layout()
     fig.savefig(os.path.join(out, "figA_skip.pdf"))

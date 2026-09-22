@@ -55,3 +55,6 @@ paper/*.fls
 paper/*.fdb_latexmk
 
 
+
+# untracked upstream baseline clones (reference/benchmark only)
+baselines/

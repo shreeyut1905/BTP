@@ -79,10 +79,10 @@ def _sea_gate_wan(self, tokens, timestep_proj, Fp, Hp, Wp, slot: int) -> bool:
         return True
     dist = rel_l1(filt[0:1], s["prev_mod"][0:1])
     s["acc"][0] += dist
+    s["prev_mod"] = filt  # rolling reference: refresh every step, like SeaCache
     if s["acc"][0] < float(self.seacache_thresh):
         return False
     s["acc"][0] = 0.0
-    s["prev_mod"] = filt
     return True
 
 

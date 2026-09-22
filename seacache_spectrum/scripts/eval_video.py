@@ -74,7 +74,8 @@ def load_pipe(model: str, compile: bool = False):
         pipe.transformer.scheduler = pipe.scheduler
         if compile:
             for i, b in enumerate(pipe.transformer.blocks):
-                pipe.transformer.blocks[i] = torch.compile(b, fullgraph=False)
+                pipe.transformer.blocks[i] = torch.compile(b, fullgraph=False, mode="max-autotune-no-cudagraphs",
+                                dynamic=False)
         fwd = (cached_wan_forward, reset_wan_cache_state, wan_cache_totals)
     else:
         from diffusers import HunyuanVideoPipeline
@@ -88,9 +89,11 @@ def load_pipe(model: str, compile: bool = False):
         pipe.transformer.scheduler = pipe.scheduler
         if compile:
             for i, b in enumerate(pipe.transformer.transformer_blocks):
-                pipe.transformer.transformer_blocks[i] = torch.compile(b, fullgraph=False)
+                pipe.transformer.transformer_blocks[i] = torch.compile(b, fullgraph=False, mode="max-autotune-no-cudagraphs",
+                                dynamic=False)
             for i, b in enumerate(pipe.transformer.single_transformer_blocks):
-                pipe.transformer.single_transformer_blocks[i] = torch.compile(b, fullgraph=False)
+                pipe.transformer.single_transformer_blocks[i] = torch.compile(b, fullgraph=False, mode="max-autotune-no-cudagraphs",
+                                dynamic=False)
         fwd = (cached_hunyuan_forward, reset_hunyuan_cache_state, hunyuan_cache_totals)
     return pipe, fwd
 
@@ -163,14 +166,27 @@ def main():
                  SDPBackend.MATH],
     }
     attn_backends = _BACKENDS[args.attn]
-    all_frames, walls, totals = {}, {}, {}
+    walls, totals = {}, {}
     if args.reuse_base and "base" in args.modes:
         args.modes = [m for m in args.modes if m != "base"]
         print(f"[{now_str()}] Will load base frames from {args.reuse_base}", flush=True)
     base_frame_dir = os.path.join(args.reuse_base, "videos") if args.reuse_base else vid_dir
+    import glob as _glob
+
+    def _load_base_frames(i):
+        """Load one prompt's base PNG frames. Streaming by design: holding all
+        946 videos' frames needs ~290 GB and gets the process OOM-killed."""
+        fpaths = sorted(_glob.glob(
+            os.path.join(base_frame_dir, f"{slugs[i]}_base_f*.png")))
+        if not fpaths:
+            raise FileNotFoundError(f"no reused base frames for {slugs[i]}")
+        return [Image.open(p).convert("RGB") for p in fpaths]
+
+    rows = []
     for mode in args.modes:
-        frames_list, wall, comp = [], 0.0, 0
+        wall, comp = 0.0, 0
         skip = 0
+        score_inline = mode != "base"
         for i, prompt in enumerate(prompts):
             reset_fn(tr, args.num_inference_steps, mode, ns)
             gen = torch.Generator(device="cuda").manual_seed(seeds[i])
@@ -187,52 +203,41 @@ def main():
             t = totals_fn(tr)
             comp += t["computed"]
             skip += t["skipped"]
-            frames_list.append(frames)
             save_mp4(frames, os.path.join(vid_dir, f"{slugs[i]}_{mode}.mp4"), args.fps)
             if mode == "base" and args.save_base_frames:
                 for f, fr in enumerate(frames):
                     as_pil(fr).save(os.path.join(vid_dir, f"{slugs[i]}_base_f{f:03d}.png"))
-            print(f"[{now_str()}] {mode} [{i + 1}/{n}] {dt:.1f}s fwd={t['computed']} skip={t['skipped']}",
-                  flush=True)
+            msg = ""
+            if score_inline:
+                bf = _load_base_frames(i)
+                pm = [frame_metrics(as_pil(b), as_pil(h), device, not args.no_lpips)
+                      for b, h in zip(bf, frames)]
+                lp = [x["lpips"] for x in pm if x["lpips"] is not None]
+                rows.append({
+                    "idx": args.offset + i, "prompt": prompt, "seed": seeds[i],
+                    "mode": mode,
+                    "psnr": float(np.mean([x["psnr"] for x in pm])),
+                    "ssim": float(np.mean([x["ssim"] for x in pm])),
+                    "lpips": float(np.mean(lp)) if lp else None,
+                })
+                msg = (f" PSNR={rows[-1]['psnr']:.2f} SSIM={rows[-1]['ssim']:.4f}"
+                       f" LPIPS={rows[-1]['lpips']}")
+                del bf, pm
+            del frames
+            print(f"[{now_str()}] {mode} [{i + 1}/{n}] {dt:.1f}s "
+                  f"fwd={t['computed']} skip={t['skipped']}{msg}", flush=True)
             torch.cuda.empty_cache()
-        all_frames[mode] = frames_list
         walls[mode] = wall
         totals[mode] = {"computed": comp, "skipped": skip}
 
     if args.reuse_base:
         with open(os.path.join(args.reuse_base, "comparison.json")) as f:
             prior = json.load(f)["summary"]
-        import glob as _glob
-        base_frames = []
-        for i in range(n):
-            fpaths = sorted(_glob.glob(os.path.join(base_frame_dir, f"{slugs[i]}_base_f*.png")))
-            if not fpaths:
-                raise FileNotFoundError(f"no reused base frames for {slugs[i]}")
-            base_frames.append([Image.open(p).convert("RGB") for p in fpaths])
-        all_frames["base"] = base_frames
         walls["base"] = float(prior["base"]["total_wall"])
         totals["base"] = {"computed": int(prior["base"]["computed"]),
                           "skipped": int(prior["base"]["skipped"])}
         if "base" not in args.modes:
             args.modes = args.modes + ["base"]
-
-    rows = []
-    if "base" in all_frames:
-        for m in args.modes:
-            if m == "base":
-                continue
-            for i in range(n):
-                pm = [frame_metrics(as_pil(b), as_pil(h), device, not args.no_lpips)
-                      for b, h in zip(all_frames["base"][i], all_frames[m][i])]
-                rows.append({
-                    "idx": args.offset + i, "prompt": prompts[i], "seed": seeds[i], "mode": m,
-                    "psnr": float(np.mean([x["psnr"] for x in pm])),
-                    "ssim": float(np.mean([x["ssim"] for x in pm])),
-                    "lpips": float(np.mean([x["lpips"] for x in pm if x["lpips"] is not None]))
-                    if any(x["lpips"] is not None for x in pm) else None,
-                })
-                print(f"  [{i}] {m} PSNR={rows[-1]['psnr']:.2f} SSIM={rows[-1]['ssim']:.4f} "
-                      f"LPIPS={rows[-1]['lpips']}", flush=True)
 
     summary = {"model": args.model, "height": height, "width": width,
                "num_frames": args.num_frames, "steps": args.num_inference_steps,
