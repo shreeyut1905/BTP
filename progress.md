@@ -290,3 +290,115 @@ written honest, not as grid-search wins)
 - `seacache_spectrum/examples_flux/`: 3 rebuilt FLUX strips (large type).
 - Root: `paper.pdf`, `supplementary.pdf`, `progress.md` (this file —
   user-requested tracked despite AGENTS.md default).
+
+## 12. Paper δ schedule + last-compute ablation (Sep 13)
+
+Last-compute SEA reference (prev_mod only on evaluated steps) is **kept**
+as a 946-prompt schedule ablation, not discarded:
+`seacache_spectrum/results/ablation_gate_last_compute/`.
+Hunyuan d019 = 35.94 dB @8984; d035 = 31.57 dB @6738.
+
+### Hunyuan MAIN (rolling gate, SeaCache-faithful)
+Target SeaCache budgets, not SeaCache's δ numbers:
+1. **δ=0.27 RUNNING** → fwd=24/50 ≈ **6738 TFLOPs** = SeaCache δ0.19
+   (6747). This replaces unmatched 8984 as the fair moderate-budget row
+   once 946 finishes.
+2. **Do NOT run chained δ=0.48 as MAIN.** Slope from rolling smoke
+   (0.20→29 compute, 0.27→24) predicts 0.48 → ~9 compute, far below
+   SeaCache 0.35's **16.4 compute / 4598 TFLOPs**. When d027 ends:
+   smoke 4 prompts at **0.36 / 0.38 / 0.40**, pick fwd≈16–17, then full
+   946. Expected MAIN-2 δ ≈ **0.38**.
+3. Optional, after MAIN-2: copy-reuse (`--modes seacache`) 20 prompts at
+   rolling 0.27, same gate as hybrid, for a Hunyuan reconstructor bar.
+
+### Wan MAIN (paper — already done, do not rerun 946)
+Keep **δ=0.2 and δ=0.35** last-compute rows (28.38 @4303, 26.70 @3336).
+Wins vs SeaCache are +1.78 / +4.92 dB; TFLOPs within ~9% / ~19%.
+Optional later: 8-prompt rolling smoke at 0.2/0.35 only if a reviewer
+asks for bit-matched FLOPs — not before Hunyuan MAIN-2.
+
+### Paper
+Removed draft TODOs; Hunyuan δ0.35 filled with last-compute 31.57;
+gate-reference ablation written as a result (schedule, not a bug).
+
+### Qual sentence prompts + comparison tables (Sep 16)
+- Qual clips already used sentence prompts (retriever: "A golden retriever
+  running along a sandy beach at sunset, waves rolling in behind it";
+  balloon: "A red hot air balloon drifting slowly over green rolling hills
+  under a clear blue sky"); paper showed only single-word labels.
+- Relabeled `fig_firstframe` rows with wrapped full sentences and added
+  prompt titles to the 4 seq strips (`baselines/_bench/build_firstframe_fig.py`,
+  `build_seq_fig.py`).
+- Metrics recomputed CPU-only over all 65 frames/method
+  (`/tmp/opencode/qual_metrics.py` → `qual/*/qual_metrics.json`); mean PSNR
+  matches `meta.json` on all 12 clip-methods.
+- Main paper: new Tab. 2 (per-model mean over 2 prompts: Wan hybrid
+  32.91/0.943/0.048@32; Hunyuan hybrid 31.73/0.929/0.047@16).
+  Appendix: new Tab. 5 (full per-prompt PSNR/SSIM/LPIPS).
+  Fig. 5 caption quotes both prompts.
+- Rebuilt: `submission_ICLR2027/main.pdf` (19pp clean) → root `paper.pdf`;
+  `supplementary.pdf` = appendix pp. 13–19 via `mutool merge`.
+
+### ReSPect-vs-SeaCache ablation table (Sep 16)
+- Mirrors SeaCache Tab. 13 (vs MagCache, matched refresh ratio): ours is
+  matched-δ/matched-NFE, copy-reuse control in our harness, PSNR/SSIM/LPIPS.
+- Deltas with data: FLUX δ0.37 full-200 (`outputs_flux_d037` seacache
+  25.45/0.880/0.113 @3628 vs hybrid 26.24/0.895/0.093);
+  FLUX δ0.6 n=20 (`outputs_abl2_reuse` 23.08/0.851 vs `outputs_abl2_ref`
+  23.57/0.852 @13.0 NFE, no LPIPS); Wan δ0.31 n=20 (`outputs_abl2wan_reuse`
+  28.80/0.904 @32.4 vs `outputs_wan_hybrid_d031` rows 0-19 29.73/0.917/0.059,
+  same first-20 prompts, no LPIPS on reuse arm).
+- Main Tab. 4 in ablation section; 20pp build clean; root `paper.pdf` refreshed,
+  `supplementary.pdf` = appendix pp. 14-20.
+
+### SeaCache table moved to supplementary (Sep 16)
+- Per user (SeaCache put their MagCache Tab. 13 in the appendix, not the
+  main paper): removed Tab. `tab:abl-sea` + intro paragraph from main
+  ablation section; table now lives in the appendix after the overhead
+  table (Tab. `tab:overhead` companion: same matched-schedule design).
+- Rebuilt 20pp; root `paper.pdf` refreshed; `supplementary.pdf` =
+  appendix pp. 13-20 (re-verified start page after shift).
+
+### Filter-plot vs SeaCache (Sep 16)
+- User asked why our Wiener response graph differs from SeaCache Fig. 4.
+  Verified identical function (same formula/p=2/mean-norm as their released
+  `util_seacache.py`); only the plotted schedule instance differs (their DPM
+  illustration vs our flow instance actually used by the gate). Kept flow plot
+  per user; added one clarifying sentence to Fig. `fig:app-filters` caption.
+
+### Forecaster param ablation on FLUX (Sep 16)
+- Per user (no reuse-vs-ours framing in main ablation): swept M and λ one
+  at a time on FLUX δ0.6 first-20 subset, same gate → identical NFE 13.0
+  (260/740 all arms). Runs: `outputs_abl2_m2/m6/lam001/lam10` (reuse_images;
+  means recomputed from PNGs since reuse arms skip metric reduction).
+- Results: ref (M4 λ0.1) 23.57/0.852; M2 23.02/0.845 (−0.55dB, too stiff);
+  M6 23.72/0.855 (+0.15); λ0.01 23.56/0.853; λ1.0 23.38/0.847
+  (over-regularized). Flat optimum → defaults robust, not tuned.
+- Main Tab. 4 + paragraph after Window-K; 20pp clean; root PDFs refreshed
+  (supp = pp. 14-20).
+
+### Reuse ablation out of main paper (Sep 16)
+- Per user: moved ΔdB-vs-copy-reuse block (blend/warm-up/K paragraphs +
+  Fig. 6) from main ablation to new appendix §H (`app:abl-reuse`).
+- Main ablation now: absolute M/λ sensitivity table (Tab. 4) + gate
+  reference; intro points to appendix for paired reconstructor ablations.
+- 20pp clean; root PDFs refreshed (supp = pp. 13-20).
+
+### Table 2 removed (Sep 16)
+- Per user: deleted main-paper qual-clip means table (`tab:qual`); Fig. 5
+  caption now points to App. I for strips + per-clip metrics; appendix
+  per-prompt table kept (dangling ref fixed). 20pp clean, PDFs refreshed.
+
+### Formal language overhaul (Sep 16)
+- Abstract rewritten formulation-first (schedule+reconstructor framing,
+  uniform-bound claim up front); no "replaces".
+- Dropped all `torch.compile` disclaimers (3) and RTX PRO 6000/A100 mentions
+  (3+1 appendix); single neutral env statement (B200/bf16, †/‡ marks).
+- SeaCache-exclusion moved to appendix (condensed, neutral); copy-reuse
+  control claims removed from main Results/Conclusion + related-work/method
+  pointers reworded (w=0.5 sentence kept accurate); Cost paragraph moved to
+  appendix with Tab. overhead.
+- Formal-register pass: results narrative, captions, teaser, method
+  (cheap/drop-in/silently), ablation leftovers, conclusion tail,
+  limitations, appendix moved paragraphs. All numbers/claims intact.
+- 20pp clean, zero undefined; root PDFs refreshed (supp = pp. 13-20).
